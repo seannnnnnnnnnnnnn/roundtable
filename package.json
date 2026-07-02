@@ -1,0 +1,141 @@
+{
+  "name": "roundtable",
+  "version": "0.1.0",
+  "description": "把一个问题交给多个独立立场，让分歧变成更可靠的行动建议。",
+  "author": "seannnn",
+  "license": "MIT",
+  "homepage": "https://github.com/seannnnnnnnnnnnnn/roundtable",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seannnnnnnnnnnnnn/roundtable.git"
+  },
+  "main": "desktop/main.mjs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:web": "vite --host 127.0.0.1",
+    "build": "tsc -p tsconfig.json && vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "desktop:dev": "npm run build && npm run build:server && electron .",
+    "desktop:pack": "npm run build && npm run build:server && electron-builder --mac --dir",
+    "desktop:dist": "npm run build && npm run build:server && electron-builder --mac dmg zip --publish never",
+    "desktop:release": "npm run build && npm run build:server && electron-builder --mac dmg zip --publish always",
+    "start": "tsx server/index.ts",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@fastify/static": "^9.1.3",
+    "better-sqlite3": "^12.5.0",
+    "dotenv": "^17.4.2",
+    "electron-updater": "^6.8.9",
+    "fastify": "^5.6.2",
+    "lucide-react": "^0.561.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@electron/notarize": "^3.1.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.10.4",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "concurrently": "^9.2.1",
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0"
+  },
+  "build": {
+    "appId": "com.seannnn.roundtable",
+    "productName": "Roundtable",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "artifactName": "Roundtable-${version}-${arch}.${ext}",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "files": [
+      "desktop/**/*",
+      "dist-server/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "web"
+      },
+      {
+        "from": "server/prompts/roles",
+        "to": "roles"
+      },
+      {
+        "from": "build/assets/roundtable-icon.png",
+        "to": "icon/roundtable-icon.png"
+      }
+    ],
+    "afterPack": "scripts/after-pack.cjs",
+    "afterSign": "scripts/notarize.cjs",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/assets/roundtable-icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Roundtable ${version}",
+      "backgroundColor": "#080A0D",
+      "iconSize": 112,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 190,
+          "type": "file"
+        },
+        {
+          "x": 390,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "seannnnnnnnnnnnnn",
+      "repo": "roundtable",
+      "releaseType": "release"
+    }
+  }
+}
