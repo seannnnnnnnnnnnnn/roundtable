@@ -3182,6 +3182,22 @@ button:disabled {
   opacity: 0.55;
 }
 
+.software-update-card > .update-fallback-link {
+  height: 27px;
+  margin-top: 7px;
+  border-color: transparent;
+  color: #7f8998;
+  background: transparent;
+}
+
+.update-signing-note {
+  display: block;
+  margin-top: 9px;
+  color: #6f7886;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
 .update-progress {
   height: 3px;
   margin: 0 0 11px;

@@ -1,5 +1,6 @@
 import { pathToFileURL } from "node:url";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   app,
   BrowserWindow,
@@ -15,14 +16,19 @@ const { autoUpdater } = updaterPackage;
 const API_PORT = 18787;
 const API_URL = `http://127.0.0.1:${API_PORT}`;
 const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const RELEASES_URL =
+  "https://github.com/seannnnnnnnnnnnnn/roundtable/releases/latest";
 let mainWindow = null;
 let updateTimer = null;
+let automaticInstallAvailable = false;
 let updateState = {
   status: "idle",
   message: "启动后自动检查更新",
   version: app.getVersion(),
   progress: 0,
-  availableVersion: ""
+  availableVersion: "",
+  automaticInstallAvailable: false,
+  manualUrl: RELEASES_URL
 };
 
 const gotLock = app.requestSingleInstanceLock();
@@ -109,6 +115,18 @@ function broadcastUpdate(next) {
   }
 }
 
+function hasDeveloperIdSignature() {
+  if (process.platform !== "darwin" || !app.isPackaged) return false;
+  const appBundle = path.resolve(process.execPath, "../../..");
+  const result = spawnSync(
+    "/usr/bin/codesign",
+    ["-dv", "--verbose=4", appBundle],
+    { encoding: "utf8" }
+  );
+  const details = `${result.stdout || ""}\n${result.stderr || ""}`;
+  return /Authority=Developer ID Application:/.test(details);
+}
+
 function setupUpdater() {
   if (!app.isPackaged) {
     broadcastUpdate({
@@ -118,7 +136,9 @@ function setupUpdater() {
     return;
   }
 
-  autoUpdater.autoDownload = true;
+  automaticInstallAvailable = hasDeveloperIdSignature();
+  broadcastUpdate({ automaticInstallAvailable });
+  autoUpdater.autoDownload = automaticInstallAvailable;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowPrerelease = false;
   autoUpdater.logger = {
@@ -140,6 +160,15 @@ function setupUpdater() {
     });
   });
   autoUpdater.on("update-available", (info) => {
+    if (!automaticInstallAvailable) {
+      broadcastUpdate({
+        status: "manual",
+        message: `发现 ${info.version}。当前版本未完成 Apple 公证，请下载安装包更新。`,
+        availableVersion: info.version,
+        progress: 0
+      });
+      return;
+    }
     broadcastUpdate({
       status: "downloading",
       message: `发现 ${info.version}，正在后台下载`,
@@ -214,6 +243,11 @@ function friendlyUpdateError(error) {
   return "更新服务暂时不可用，请稍后重试。";
 }
 
+async function openUpdatePage() {
+  await shell.openExternal(RELEASES_URL);
+  return true;
+}
+
 function installUpdate() {
   if (updateState.status !== "ready") return false;
   autoUpdater.quitAndInstall(false, true);
@@ -285,6 +319,7 @@ ipcMain.handle("desktop:get-info", () => ({
 }));
 ipcMain.handle("desktop:check-update", checkForUpdates);
 ipcMain.handle("desktop:install-update", installUpdate);
+ipcMain.handle("desktop:open-update-page", openUpdatePage);
 
 app.whenReady().then(async () => {
   try {

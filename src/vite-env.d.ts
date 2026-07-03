@@ -8,11 +8,14 @@ type DesktopUpdateStatus = {
     | "current"
     | "downloading"
     | "ready"
+    | "manual"
     | "error";
   message: string;
   version: string;
   progress: number;
   availableVersion: string;
+  automaticInstallAvailable: boolean;
+  manualUrl: string;
 };
 
 type DesktopInfo = {
@@ -29,6 +32,7 @@ interface Window {
     getInfo: () => Promise<DesktopInfo>;
     checkForUpdates: () => Promise<DesktopUpdateStatus>;
     installUpdate: () => Promise<boolean>;
+    openUpdatePage: () => Promise<boolean>;
     onUpdateStatus: (
       listener: (status: DesktopUpdateStatus) => void
     ) => () => void;

@@ -1716,6 +1716,8 @@ function DesktopUpdatePanel() {
   const current = update || info?.update;
   const busy = current?.status === "checking" || current?.status === "downloading";
   const ready = current?.status === "ready";
+  const manual = current?.status === "manual";
+  const failed = current?.status === "error";
   return (
     <article className="software-update-card">
       <div className="software-update-heading">
@@ -1738,11 +1740,34 @@ function DesktopUpdatePanel() {
         disabled={busy}
         onClick={() => {
           if (ready) void desktop.installUpdate();
+          else if (manual) void desktop.openUpdatePage();
           else void desktop.checkForUpdates();
         }}
       >
-        {ready ? "立即重启并更新" : busy ? "处理中…" : "立即检查更新"}
+        {ready
+          ? "立即重启并更新"
+          : manual
+            ? "打开下载页"
+            : busy
+              ? "处理中…"
+              : failed
+                ? "重新检查"
+                : "立即检查更新"}
       </button>
+      {failed && (
+        <button
+          className="update-fallback-link"
+          type="button"
+          onClick={() => void desktop.openUpdatePage()}
+        >
+          仍然失败？打开下载页
+        </button>
+      )}
+      {info?.isPackaged && current && !current.automaticInstallAvailable && (
+        <small className="update-signing-note">
+          当前为社区签名版；在线检查正常，安装更新时会打开对应安装包。
+        </small>
+      )}
     </article>
   );
 }
