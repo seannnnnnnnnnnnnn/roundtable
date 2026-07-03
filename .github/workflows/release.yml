@@ -64,3 +64,12 @@ jobs:
             export APPLE_API_ISSUER="$NOTARY_APPLE_API_ISSUER"
           fi
           npx electron-builder --mac dmg zip --arm64 --x64 --publish always
+
+      - name: Finalize release metadata
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          shasum -a 256 release/Roundtable-"$version"-*.dmg release/Roundtable-"$version"-*.zip > release/SHA256SUMS.txt
+          gh release upload "v$version" release/SHA256SUMS.txt --clobber
+          if [[ -f "release-notes/v$version.md" ]]; then
+            gh release edit "v$version" --notes-file "release-notes/v$version.md"
+          fi
