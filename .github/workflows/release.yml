@@ -38,7 +38,7 @@ jobs:
           npm run build
           npm run build:server
 
-      - name: Publish GitHub Release
+      - name: Package macOS
         env:
           SIGNING_CSC_LINK: ${{ secrets.CSC_LINK }}
           SIGNING_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -63,15 +63,35 @@ jobs:
             export APPLE_API_KEY_ID="$NOTARY_APPLE_API_KEY_ID"
             export APPLE_API_ISSUER="$NOTARY_APPLE_API_ISSUER"
           fi
-          npx electron-builder --mac dmg zip --arm64 --x64 --publish always
+          npx electron-builder --mac dmg zip --arm64 --x64 --publish never
 
-      - name: Finalize release metadata
+      - name: Publish GitHub Release
         run: |
           version="$(node -p "require('./package.json').version")"
           shasum -a 256 release/Roundtable-"$version"-*.dmg release/Roundtable-"$version"-*.zip > release/SHA256SUMS.txt
-          gh release upload "v$version" release/SHA256SUMS.txt --clobber
-          if [[ -f "release-notes/v$version.md" ]]; then
+          assets=(
+            release/Roundtable-"$version"-*.dmg
+            release/Roundtable-"$version"-*.zip
+            release/Roundtable-"$version"-*.blockmap
+            release/latest-mac.yml
+            release/SHA256SUMS.txt
+          )
+          notes_file="release-notes/v$version.md"
+          if gh release view "v$version" > /dev/null 2>&1; then
+            gh release upload "v$version" "${assets[@]}" --clobber
             release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$version" --jq ".id")"
-            jq -Rs "{body: .}" "release-notes/v$version.md" |
-              gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" --input - > /dev/null
+            if [[ -f "$notes_file" ]]; then
+              jq -Rs "{body: .}" "$notes_file" |
+                gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" --input - > /dev/null
+            fi
+          elif [[ -f "$notes_file" ]]; then
+            gh release create "v$version" "${assets[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "Roundtable $version · macOS" \
+              --notes-file "$notes_file"
+          else
+            gh release create "v$version" "${assets[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "Roundtable $version · macOS" \
+              --generate-notes
           fi
